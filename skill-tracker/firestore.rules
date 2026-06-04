@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if the user is an admin
+    function isAdmin() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // Helper function to check if the user is faculty
+    function isFaculty() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Faculty';
+    }
+
+    // Rules for users collection
+    match /users/{userId} {
+      // Anyone logged in can read user profiles (necessary for leaderboard and viewing data)
+      allow read: if request.auth != null;
+      
+      // Users can only create their own profile, and only with appropriate roles
+      allow create: if request.auth != null && request.auth.uid == userId &&
+        (request.resource.data.role == 'Student' || 
+         request.resource.data.role == 'PendingFaculty' || 
+         request.resource.data.email == 'farhannasir826@gmail.com');
+      
+      // Users can update their own profile as long as they don't change their role. 
+      // Admins can update any profile (e.g. approving faculty).
+      allow update: if request.auth != null && (
+        isAdmin() || 
+        (request.auth.uid == userId && request.resource.data.role == resource.data.role)
+      );
+      
+      // Admins can delete profiles
+      allow delete: if isAdmin();
+    }
+
+    // Rules for skills collection
+    match /skills/{skillId} {
+      // Anyone logged in can read skills (necessary for leaderboard and general access)
+      allow read: if request.auth != null;
+      
+      // Any logged-in user can create a skill document for themselves
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      
+      // Users can update/delete their own skills. Admins and Faculty can update/delete any skill.
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid || 
+        isAdmin() || 
+        isFaculty()
+      );
+    }
+
+    // Rules for projects collection
+    match /projects/{projectId} {
+      // Anyone logged in can read projects (necessary for viewing portfolios)
+      allow read: if request.auth != null;
+      
+      // Any logged-in user can create a project document for themselves
+      allow create: if request.auth != null && request.resource.data.studentId == request.auth.uid;
+      
+      // Users can update/delete their own projects. Admins can update/delete any project.
+      allow update, delete: if request.auth != null && (
+        resource.data.studentId == request.auth.uid || 
+        isAdmin()
+      );
+    }
+  }
+}

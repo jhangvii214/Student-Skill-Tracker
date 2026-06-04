@@ -1,0 +1,19 @@
+# Frontend ignores
+skill-tracker/node_modules/
+skill-tracker/dist/
+skill-tracker/dist-ssr/
+skill-tracker/.firebase/
+skill-tracker/*.local
+
+# Backend ignores
+ml-backend/venv/
+ml-backend/__pycache__/
+ml-backend/*.pyc
+ml-backend/.env
+
+# Global / System ignores
+.DS_Store
+*.log
+.idea/
+.vscode/
+.gemini/
